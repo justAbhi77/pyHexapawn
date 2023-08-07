@@ -12,7 +12,9 @@ class Gui(Tk):
         self.title(title)
         self.resizable(True, True)
         self.wpawn = PhotoImage(file='assets/white.gif')
-        self.tk.call('wm', 'iconphoto', self._w, self.wpawn)
+        self.bpawn = PhotoImage(file='assets/black.gif')
+        self.empty = PhotoImage(file='assets/empty.gif')
+        self.tk.call('wm', 'iconphoto', self._w, self.bpawn)
 
         table = Frame(self)
         table.config(bg='black')
@@ -40,13 +42,14 @@ class Gui(Tk):
 
         Button(self,text="Hello World",command=self.printHelp).pack(fill=BOTH,pady=10)
 
-        boardList = list()
+        Gameboard = [[]*3]*3
         self.tile_frame = Frame(self)
         self.tile_frame.pack(padx=60, pady=(0, 60),expand=True)
 
         # Create game board tiles
         color = 'black'
         i = 0
+
         for row in range(3):
             for col in range(3):
                 tile = Button(self.tile_frame,text='{},{}'.format(row,col))
@@ -55,17 +58,27 @@ class Gui(Tk):
                     bg=color,
                     fg='white' if color == 'black' else 'black',
                     activebackground=color,
-                    command=lambda i=i: self.player_selected(i)
+                    command=lambda row=row,col=col: self.player_selected(row,col)
                 )
                 tile.grid(column=col, row=row)
-                boardList.append(tile)
+                Gameboard.append(tile)
                 color = 'black' if color == 'white' else 'white'
                 i += 1
 
+                if row == 0:
+                    tile.config(image=self.bpawn)
+                    tile.image = self.wpawn
+                if row == 1:
+                    tile.config(image=self.empty)
+                    tile.image = self.empty
+                if row == 2:
+                    tile.config(image=self.wpawn)
+                    tile.image = self.bpawn
+
         self.centerselfdow()
     
-    def player_selected(self,index:int):
-        print("Hello world ",index)
+    def player_selected(self,row:int,col:int):
+        print("Hello world ",row," ",col)
 
     def printHelp(self):
         print('Hello World')
