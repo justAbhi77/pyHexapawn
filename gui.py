@@ -50,9 +50,10 @@ class Gui(Tk):
         Button(self, text="Hello World", command=self.printHelp).pack(
             fill=BOTH, pady=10)
 
-        Gameboard = [[]*3]*3
-        self.tile_frame = Frame(self)
-        self.tile_frame.pack(padx=60, pady=(0, 60), expand=True)
+        Gameboard = [[-1, -1, -1], [0, 0, 0], [1, 1, 1]]
+        print(Gameboard)
+        tile_frame = Frame(self)
+        tile_frame.pack(padx=60, pady=(0, 60), expand=True)
 
         # Create game board tiles
         color = 'black'
@@ -60,39 +61,53 @@ class Gui(Tk):
 
         for row in range(3):
             for col in range(3):
-                tile = myButton(self.tile_frame, text='{},{}'.format(row, col))
+                tile = myButton(tile_frame, text='{},{}'.format(row, col))
                 tile.config(
                     relief=FLAT,
                     bg=color,
                     fg='white' if color == 'black' else 'black',
                     activebackground=color,
                     command=lambda row=row, col=col, tile=tile: self.player_selected(
-                        row, col, tile)
+                        row, col, tile),
                 )
                 tile.grid(column=col, row=row)
                 Gameboard.append(tile)
                 color = 'black' if color == 'white' else 'white'
                 i += 1
 
+                tile.group = Gameboard[row][col]
+
                 if row == 0:
                     tile.config(image=self.bpawn)
-                    tile.image = self.wpawn
-                    tile.isAIpiece = True
+                    tile.image = self.bpawn
                 if row == 1:
                     tile.config(image=self.empty)
                     tile.image = self.empty
                 if row == 2:
                     tile.config(image=self.wpawn)
-                    tile.image = self.bpawn
-                    tile.isplayerpiece = True
+                    tile.image = self.wpawn
 
         self.centerselfdow()
 
     def player_selected(self, row: int, col: int, tile: myButton):
-        if tile.isplayerpiece and self.selectedPiece == None:
+
+        if tile.group != 0 and self.selectedPiece == None:
+            print("selected piece at",row,col)
             self.selectedPiece = tile
-        if not tile.isplayerpiece and not tile.isAIpiece and self.selectedPiece != None:
-            self.selectedPiece.grid(column=col, row=row)
+
+        elif self.selectedPiece != None and tile.group != self.selectedPiece.group:
+            print('move selected piece to', row, col)
+
+            tile.config(image=self.selectedPiece.image)
+            tile.image = self.selectedPiece.image
+            self.selectedPiece.config(image=self.empty)
+            self.selectedPiece.image = self.empty
+
+            tile.group = self.selectedPiece.group
+
+            self.selectedPiece.group = 0
+
+            self.selectedPiece = None
 
     def printHelp(self):
         print('Hello World')

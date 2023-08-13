@@ -2,5 +2,5 @@ from tkinter import *
 
 class myButton(Button):
     
-    isplayerpiece:bool = False
-    isAIpiece:bool = False
+    group:int = 0
+    image:PhotoImage = None
