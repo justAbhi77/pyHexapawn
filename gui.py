@@ -17,12 +17,14 @@ class HexapawnGUI(Tk):
         self.tk.call('wm', 'iconphoto', self._w, self.bpawn)
         self.selectedPiece = None
 
-        self.create_score_board()
-
-        self.AI_move_directions = (
-            Position(1, 0), Position(1, -1), Position(1, 1))
-        self.Player_move_directions = (
+        self.ai_move_directions = (
             Position(-1, 0), Position(-1, 1), Position(-1, -1))
+        self.player_move_directions = (
+            Position(1, 0), Position(1, -1), Position(1, 1))
+
+        self.current_player = PLAYER
+
+        self.create_score_board()
         self.create_game_board()
         self.center_window()
 
@@ -87,33 +89,61 @@ class HexapawnGUI(Tk):
 
     def player_selected(self, row: int, col: int, tile: HexapawnButton):
         if self.selectedPiece is None:
-            if tile.group != EMPTY:
-                print(f'Selected piece at ({row}, {col})')
-                self.selectedPiece = tile
+            self.handle_selection(row, col, tile)
         else:
             if tile.group != self.selectedPiece.group:
+                self.handle_move(row, col, tile)
+            else:
+                print('Deselected piece')
+            self.selectedPiece = None
 
-                if tile.position in (self.selectedPiece.position + direction for direction in self.Player_move_directions):
-                    print(
-                        f'Valid move for selected piece, move from {self.selectedPiece.position} to ({row}, {col})')
-                    if self.Gameboard[row][col] == -self.selectedPiece.group:
-                        print(f'Captured piece at {row}, {col}, Deselected')
+    def handle_selection(self, row: int, col: int, tile: HexapawnButton):
+        if tile.group == EMPTY:
+            return
+        if tile.group == self.current_player:
+            print(f'Selected piece at ({row}, {col})')
+            self.selectedPiece = tile
+        else:
+            print(
+                f'Selected piece is not of this Player, Current player is {self.current_player}')
 
-                    tile.config(image=self.selectedPiece.image)
-                    tile.image = self.selectedPiece.image
-                    self.selectedPiece.config(image=self.empty)
-                    self.selectedPiece.image = self.empty
+    def handle_move(self, row: int, col: int, tile: HexapawnButton):
+        direction = self.selectedPiece.position - tile.position
 
-                    tile.group = self.selectedPiece.group
-                    self.Gameboard[row][col] = tile.group
-
-                    self.Gameboard[self.selectedPiece.position.x][self.selectedPiece.position.y] = 0
-                    self.selectedPiece.group = 0
+        if direction in self.player_move_directions or direction in self.ai_move_directions:
+            if direction == self.player_move_directions[0] or direction == self.ai_move_directions[0]:
+                if self.Gameboard[row][col] == EMPTY:
+                    self.move_piece(row, col, tile)
                 else:
                     print(
                         f'Invalid move for selected piece at {self.selectedPiece.position}, Deselected')
+            else:
+                if self.Gameboard[row][col] == -self.selectedPiece.group:
+                    self.move_piece(row, col, tile)
+                else:
+                    print(
+                        f'Invalid move for selected piece at {self.selectedPiece.position}, Deselected')
+        else:
+            print(
+                f'Invalid move for selected piece at {self.selectedPiece.position}, Deselected')
 
-            self.selectedPiece = None
+    def move_piece(self, row: int, col: int, tile: HexapawnButton):
+        print(
+            f'Valid move for selected piece, move from {self.selectedPiece.position} to ({row}, {col})')
+        if self.Gameboard[row][col] == -self.selectedPiece.group:
+            print(f'Captured piece at {row}, {col}, Deselected')
+
+        tile.config(image=self.selectedPiece.image)
+        tile.image = self.selectedPiece.image
+        self.selectedPiece.config(image=self.empty)
+        self.selectedPiece.image = self.empty
+
+        tile.group = self.selectedPiece.group
+        self.Gameboard[row][col] = tile.group
+        self.Gameboard[self.selectedPiece.position.x][self.selectedPiece.position.y] = EMPTY
+
+        self.selectedPiece.group = EMPTY
+        self.current_player = -self.current_player
 
     def print_help(self):
         print('Hello World')

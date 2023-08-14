@@ -4,10 +4,10 @@ class Position:
     def __init__(self, x: int = 0, y: int = 0):
         self.x = x
         self.y = y
-
-    def __add__(self, other):
-        x = self.x + other.x
-        y = self.y + other.y
+    
+    def __sub__ (self, other):
+        x = self.x - other.x
+        y = self.y - other.y
         return Position(x, y)
 
     def __eq__(self, other_position: object) -> bool:
