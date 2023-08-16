@@ -22,6 +22,5 @@ class Position:
 class HexapawnButton(Button):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
-        self.parent = parent
         self.group = 0
-        self.position = Position()
+        self.position:Position = Position()

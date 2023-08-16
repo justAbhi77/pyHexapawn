@@ -1,6 +1,8 @@
 from tkinter import *
+from tkinter import messagebox
 from helpers import *
 
+BOARDSIZE = 3
 PLAYER = 1
 EMPTY = 0
 AI = -1
@@ -17,12 +19,23 @@ class HexapawnGUI(Tk):
         self.tk.call('wm', 'iconphoto', self._w, self.bpawn)
         self.selectedPiece = None
 
+        self.playerWin = 0
+        self.AIWin = 0
+
         self.ai_move_directions = (
             Position(-1, 0), Position(-1, 1), Position(-1, -1))
         self.player_move_directions = (
             Position(1, 0), Position(1, -1), Position(1, 1))
 
+        self.direction_mapping = {
+            AI: self.ai_move_directions,
+            PLAYER: self.player_move_directions
+        }
+
+        self.valid_directions = self.player_move_directions + self.ai_move_directions
+
         self.current_player = PLAYER
+        self.matchEnd = False
 
         self.create_score_board()
         self.create_game_board()
@@ -31,12 +44,15 @@ class HexapawnGUI(Tk):
     def create_score_board(self):
         entries = [
             ("Player", "Ai"),
-            ("0", "0")
+            (self.playerWin, self.AIWin)
         ]
 
         table = Frame(self)
         table.config(bg='black')
         table.pack(pady=10)
+
+        self.playertext = None
+        self.aitext = None
 
         for row, values in enumerate(entries):
             for col, text in enumerate(values):
@@ -46,48 +62,64 @@ class HexapawnGUI(Tk):
                 columnname.grid(row=row, column=col)
                 columnname.insert(index=END, string=text)
 
-        Button(self, text="Hello World", command=self.print_help).pack(
+                if row == 1:
+                    if col == 0:
+                        self.playertext = columnname
+                    else:
+                        self.aitext = columnname
+
+        Button(self, text="Start a New Match", command=self.print_help).pack(
             fill=BOTH, pady=10)
 
     def create_game_board(self):
-        self.Gameboard = [[AI, AI, AI], [
-            EMPTY, EMPTY, EMPTY], [PLAYER, PLAYER, PLAYER]]
+        self.Gameboard = [[EMPTY] * BOARDSIZE for _ in range(BOARDSIZE)]
+        self.Player_units = []
+        self.AI_units = []
 
-        tile_frame = Frame(self)
-        tile_frame.pack(padx=60, pady=(0, 60), expand=True)
+        self.Gameboard_tile_frame = Frame(self)
+        self.Gameboard_tile_frame.pack(padx=60, pady=(0, 60), expand=True)
 
         colors = ('black', 'white')
 
-        for row in range(3):
-            for col in range(3):
+        for row in range(BOARDSIZE):
+            for col in range(BOARDSIZE):
                 tile = HexapawnButton(
-                    tile_frame, text='{},{}'.format(row, col))
+                    self.Gameboard_tile_frame, text='{},{}'.format(row, col))
+                tile_color = colors[(row + col) % 2]
+                text_color = 'white' if tile_color == 'black' else 'black'
+
                 tile.config(
                     relief=FLAT,
-                    bg=colors[(row + col) % 2],
-                    fg='white' if colors[(row + col) %
-                                         2] == 'black' else 'black',
-                    activebackground=colors[(row + col) % 2],
+                    bg=tile_color,
+                    fg=text_color,
+                    activebackground=tile_color,
                     command=lambda row=row, col=col, tile=tile: self.player_selected(
                         row, col, tile),
                 )
                 tile.grid(column=col, row=row)
 
-                tile.group = self.Gameboard[row][col]
-                tile.position.x = row
-                tile.position.y = col
+                tile.position = Position(row, col)
 
                 if row == 0:
-                    tile.config(image=self.bpawn)
-                    tile.image = self.bpawn
-                elif row == 2:
-                    tile.config(image=self.wpawn)
-                    tile.image = self.wpawn
+                    self.initialize_unit(tile, AI, self.bpawn, self.AI_units)
+                elif row == BOARDSIZE - 1:
+                    self.initialize_unit(
+                        tile, PLAYER, self.wpawn, self.Player_units)
                 else:
-                    tile.config(image=self.empty)
-                    tile.image = self.empty
+                    self.initialize_unit(tile, EMPTY, self.empty)
+
+    def initialize_unit(self, tile, group, image, unit_list=None):
+        tile.group = group
+        tile.config(image=image)
+        tile.image = image
+        self.Gameboard[tile.position.x][tile.position.y] = group
+
+        if unit_list is not None:
+            unit_list.append(tile)
 
     def player_selected(self, row: int, col: int, tile: HexapawnButton):
+        if self.matchEnd:
+            return
         if self.selectedPiece is None:
             self.handle_selection(row, col, tile)
         else:
@@ -110,15 +142,17 @@ class HexapawnGUI(Tk):
     def handle_move(self, row: int, col: int, tile: HexapawnButton):
         direction = self.selectedPiece.position - tile.position
 
-        if direction in self.player_move_directions or direction in self.ai_move_directions:
+        if direction in self.valid_directions:
+            target_group = self.Gameboard[row][col]
+
             if direction == self.player_move_directions[0] or direction == self.ai_move_directions[0]:
-                if self.Gameboard[row][col] == EMPTY:
+                if target_group == EMPTY:
                     self.move_piece(row, col, tile)
                 else:
                     print(
                         f'Invalid move for selected piece at {self.selectedPiece.position}, Deselected')
             else:
-                if self.Gameboard[row][col] == -self.selectedPiece.group:
+                if target_group == -self.selectedPiece.group:
                     self.move_piece(row, col, tile)
                 else:
                     print(
@@ -131,22 +165,118 @@ class HexapawnGUI(Tk):
         print(
             f'Valid move for selected piece, move from {self.selectedPiece.position} to ({row}, {col})')
         if self.Gameboard[row][col] == -self.selectedPiece.group:
-            print(f'Captured piece at {row}, {col}, Deselected')
+            print(f'Captured piece at ({row}, {col}), Deselected')
+            self.capture_unit(tile)
 
-        tile.config(image=self.selectedPiece.image)
-        tile.image = self.selectedPiece.image
-        self.selectedPiece.config(image=self.empty)
-        self.selectedPiece.image = self.empty
+        self.update_tile_image(tile, self.selectedPiece.image)
+        self.update_tile_image(self.selectedPiece, self.empty)
 
-        tile.group = self.selectedPiece.group
+        self.update_tile_group(tile, self.selectedPiece.group)
+
+        self.update_gameboard(row, col, tile)
+
+        self.update_player_units_after_move(self.selectedPiece, tile)
+        self.current_player = -self.current_player
+        self.checkWin(row)
+        self.update_tile_group(self.selectedPiece, EMPTY)
+
+    def capture_unit(self, tile):
+        if tile.group == PLAYER:
+            self.Player_units.remove(tile)
+        else:
+            self.AI_units.remove(tile)
+
+    def update_tile_image(self, tile, image):
+        tile.config(image=image)
+        tile.image = image
+
+    def update_tile_group(self, tile, group):
+        tile.group = group
+
+    def update_gameboard(self, row, col, tile):
         self.Gameboard[row][col] = tile.group
         self.Gameboard[self.selectedPiece.position.x][self.selectedPiece.position.y] = EMPTY
 
-        self.selectedPiece.group = EMPTY
-        self.current_player = -self.current_player
+    def update_player_units_after_move(self, source_tile, target_tile):
+        if source_tile in self.Player_units:
+            self.Player_units.remove(source_tile)
+            self.Player_units.insert(0, target_tile)
+        elif source_tile in self.AI_units:
+            self.AI_units.remove(source_tile)
+            self.AI_units.insert(0, target_tile)
 
-    def print_help(self):
-        print('Hello World')
+    def checkWin(self, row):
+        print('gameboard after move is')
+        for boardrow in self.Gameboard:
+            print(boardrow)
+
+        if row == 0 or row == BOARDSIZE-1:
+            winner = None
+            if self.selectedPiece.group == PLAYER:
+                winner = 'Player'
+                self.playerWin += 1
+                self.playertext.delete(0, END)
+                self.playertext.insert(0, self.playerWin)
+            else:
+                winner = 'AI'
+                self.AIWin += 1
+                self.aitext.delete(0, END)
+                self.aitext.insert(0, self.AIWin)
+            print(f'{winner} won by conquer')
+            self.matchEnd = True
+            messagebox.showinfo('Match End', f'{winner} won by conquer')
+        elif self.current_player == PLAYER:
+            if not self.has_moveable_unit(self.Player_units):
+                print('AI Wins')
+                self.matchEnd = True
+                self.AIWin += 1
+                self.aitext.delete(0, END)
+                self.aitext.insert(0, self.AIWin)
+                messagebox.showinfo('Match End', 'AI Wins')
+        else:
+            if not self.has_moveable_unit(self.AI_units):
+                print('Player Wins')
+                self.matchEnd = True
+                self.playerWin += 1
+                self.playertext.delete(0, END)
+                self.playertext.insert(0, self.playerWin)
+                messagebox.showinfo('Match End', 'Player Wins')
+
+    def has_moveable_unit(self, units: list[HexapawnButton]) -> bool:
+        result = False
+
+        for unit in units:
+            print(unit.position)
+            direction = self.direction_mapping[unit.group]
+
+            possible_position = unit.position - direction[0]
+
+            if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+                pass
+
+            elif self.Gameboard[possible_position.x][possible_position.y] == EMPTY:
+                result = True
+                break
+
+            possible_position = unit.position - direction[1]
+
+            if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+                pass
+
+            elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
+                result = True
+                break
+
+            possible_position = unit.position - direction[2]
+
+            if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+                pass
+
+            elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
+                result = True
+                break
+
+        return result
 
     def center_window(self):
         self.update_idletasks()
@@ -159,6 +289,12 @@ class HexapawnGUI(Tk):
         x = self.winfo_screenwidth() // 2 - self_width // 2
         y = self.winfo_screenheight() // 2 - self_height // 2
         self.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+    def print_help(self):
+        self.Gameboard_tile_frame.destroy()
+        self.matchEnd = False
+        self.create_game_board()
+        self.center_window()
 
 
 if __name__ == "__main__":
