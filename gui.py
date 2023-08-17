@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 from helpers import *
+import random
 
 BOARDSIZE = 3
 PLAYER = 1
@@ -73,6 +74,8 @@ class HexapawnGUI(Tk):
 
     def create_game_board(self):
         self.Gameboard = [[EMPTY] * BOARDSIZE for _ in range(BOARDSIZE)]
+        self.boardtiles = [[None]*BOARDSIZE for _ in range(BOARDSIZE)]
+
         self.Player_units = []
         self.AI_units = []
 
@@ -114,6 +117,8 @@ class HexapawnGUI(Tk):
         tile.image = image
         self.Gameboard[tile.position.x][tile.position.y] = group
 
+        self.boardtiles[tile.position.x][tile.position.y] = tile
+
         if unit_list is not None:
             unit_list.append(tile)
 
@@ -125,6 +130,8 @@ class HexapawnGUI(Tk):
         else:
             if tile.group != self.selectedPiece.group:
                 self.handle_move(row, col, tile)
+                self.selectedPiece = None
+                self.ai_move_pieces()
             else:
                 print('Deselected piece')
             self.selectedPiece = None
@@ -225,6 +232,7 @@ class HexapawnGUI(Tk):
             print(f'{winner} won by conquer')
             self.matchEnd = True
             messagebox.showinfo('Match End', f'{winner} won by conquer')
+            return True
         elif self.current_player == PLAYER:
             if not self.has_moveable_unit(self.Player_units):
                 print('AI Wins')
@@ -233,6 +241,7 @@ class HexapawnGUI(Tk):
                 self.aitext.delete(0, END)
                 self.aitext.insert(0, self.AIWin)
                 messagebox.showinfo('Match End', 'AI Wins')
+                return True
         else:
             if not self.has_moveable_unit(self.AI_units):
                 print('Player Wins')
@@ -241,6 +250,8 @@ class HexapawnGUI(Tk):
                 self.playertext.delete(0, END)
                 self.playertext.insert(0, self.playerWin)
                 messagebox.showinfo('Match End', 'Player Wins')
+                return True
+        return False
 
     def has_moveable_unit(self, units: list[HexapawnButton]) -> bool:
         result = False
@@ -278,6 +289,59 @@ class HexapawnGUI(Tk):
 
         return result
 
+    def ai_move_pieces(self):
+
+        if self.current_player != AI:
+            return
+
+        print("AI thinking")
+        possibleunits = self.AI_units.copy()
+
+        for unit in possibleunits:
+            if not self.has_moveable_unit([unit]):
+                possibleunits.remove(unit)
+        print("Possible units")
+        for unit in possibleunits:
+            print(unit.position)
+
+        aiselection = random.choice(possibleunits)
+
+        aiselection.invoke()
+
+        direction = self.direction_mapping[aiselection.group]
+
+        possible_positions = []
+        possible_position = aiselection.position - direction[0]
+        print(possible_position)
+
+        if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+            pass
+
+        elif self.Gameboard[possible_position.x][possible_position.y] == EMPTY:
+            possible_positions.append(possible_position)
+
+        possible_position = aiselection.position - direction[1]
+        print(possible_position)
+
+        if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+            pass
+
+        elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
+            possible_positions.append(possible_position)
+
+        possible_position = aiselection.position - direction[2]
+        print(possible_position)
+
+        if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
+            pass
+
+        elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
+            possible_positions.append(possible_position)
+
+        possible_position = random.choice(possible_positions)
+
+        self.boardtiles[possible_position.x][possible_position.y].invoke()
+
     def center_window(self):
         self.update_idletasks()
         width = self.winfo_width()
@@ -294,6 +358,7 @@ class HexapawnGUI(Tk):
         self.Gameboard_tile_frame.destroy()
         self.matchEnd = False
         self.create_game_board()
+        self.current_player = PLAYER
         self.center_window()
 
 
