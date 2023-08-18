@@ -1,11 +1,12 @@
 from tkinter import Button
 
+
 class Position:
     def __init__(self, x: int = 0, y: int = 0):
         self.x = x
         self.y = y
-    
-    def __sub__ (self, other):
+
+    def __sub__(self, other):
         x = self.x - other.x
         y = self.y - other.y
         return Position(x, y)
@@ -18,9 +19,12 @@ class Position:
     def __str__(self) -> str:
         return f"({self.x},{self.y})"
 
+    def __repr__(self) -> str:
+        return f"({self.x},{self.y})"
+
 
 class HexapawnButton(Button):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.group = 0
-        self.position:Position = Position()
+        self.position: Position = Position()

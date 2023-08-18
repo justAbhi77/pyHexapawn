@@ -104,17 +104,19 @@ class HexapawnGUI(Tk):
                 tile.position = Position(row, col)
 
                 if row == 0:
-                    self.initialize_unit(tile, AI, self.bpawn, self.AI_units)
+                    self.initialize_unit(
+                        tile, AI, self.bpawn, self.AI_units, id=row+col)
                 elif row == BOARDSIZE - 1:
                     self.initialize_unit(
-                        tile, PLAYER, self.wpawn, self.Player_units)
+                        tile, PLAYER, self.wpawn, self.Player_units, id=row+col)
                 else:
-                    self.initialize_unit(tile, EMPTY, self.empty)
+                    self.initialize_unit(tile, EMPTY, self.empty, id=row+col)
 
-    def initialize_unit(self, tile, group, image, unit_list=None):
+    def initialize_unit(self, tile: HexapawnButton, group, image, unit_list=None, id=EMPTY):
         tile.group = group
         tile.config(image=image)
         tile.image = image
+        tile.id = id
         self.Gameboard[tile.position.x][tile.position.y] = group
 
         self.boardtiles[tile.position.x][tile.position.y] = tile
@@ -178,14 +180,15 @@ class HexapawnGUI(Tk):
         self.update_tile_image(tile, self.selectedPiece.image)
         self.update_tile_image(self.selectedPiece, self.empty)
 
-        self.update_tile_group(tile, self.selectedPiece.group)
+        self.update_tile_group(
+            tile, self.selectedPiece.group, self.selectedPiece.id)
 
         self.update_gameboard(row, col, tile)
 
         self.update_player_units_after_move(self.selectedPiece, tile)
         self.current_player = -self.current_player
         self.checkWin(row)
-        self.update_tile_group(self.selectedPiece, EMPTY)
+        self.update_tile_group(self.selectedPiece, EMPTY, EMPTY)
 
     def capture_unit(self, tile):
         if tile.group == PLAYER:
@@ -197,8 +200,9 @@ class HexapawnGUI(Tk):
         tile.config(image=image)
         tile.image = image
 
-    def update_tile_group(self, tile, group):
+    def update_tile_group(self, tile, group, id):
         tile.group = group
+        tile.id = id
 
     def update_gameboard(self, row, col, tile):
         self.Gameboard[row][col] = tile.group
@@ -304,14 +308,17 @@ class HexapawnGUI(Tk):
         for unit in possibleunits:
             print(unit.position)
 
-        aiselection = random.choice(possibleunits)
+        if not possibleunits:
+            return
 
-        aiselection.invoke()
+        aiunitselection = random.choice(possibleunits)
 
-        direction = self.direction_mapping[aiselection.group]
+        aiunitselection.invoke()
+
+        direction = self.direction_mapping[aiunitselection.group]
 
         possible_positions = []
-        possible_position = aiselection.position - direction[0]
+        possible_position = aiunitselection.position - direction[0]
         print(possible_position)
 
         if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
@@ -320,7 +327,7 @@ class HexapawnGUI(Tk):
         elif self.Gameboard[possible_position.x][possible_position.y] == EMPTY:
             possible_positions.append(possible_position)
 
-        possible_position = aiselection.position - direction[1]
+        possible_position = aiunitselection.position - direction[1]
         print(possible_position)
 
         if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
@@ -329,7 +336,7 @@ class HexapawnGUI(Tk):
         elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
             possible_positions.append(possible_position)
 
-        possible_position = aiselection.position - direction[2]
+        possible_position = aiunitselection.position - direction[2]
         print(possible_position)
 
         if not (0 <= possible_position.x < BOARDSIZE and 0 <= possible_position.y < BOARDSIZE):
@@ -338,7 +345,12 @@ class HexapawnGUI(Tk):
         elif self.Gameboard[possible_position.x][possible_position.y] == -unit.group:
             possible_positions.append(possible_position)
 
+        if not possible_positions:
+            return
         possible_position = random.choice(possible_positions)
+
+        self.aimovedPiece = aiunitselection.id
+        self.aimovedPosition = possible_position
 
         self.boardtiles[possible_position.x][possible_position.y].invoke()
 
