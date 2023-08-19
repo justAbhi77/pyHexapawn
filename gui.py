@@ -6,7 +6,7 @@ import random
 BOARDSIZE = 3
 PLAYER = 1
 EMPTY = 0
-AI = -1
+AI = -PLAYER
 
 
 class HexapawnGUI(Tk):
